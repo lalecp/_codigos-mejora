@@ -1,0 +1,896 @@
+# Especificación funcional y técnica
+## Monitor dinámico de composición, estrategia y riesgo para portafolios Pensionales
+
+**Propósito de este documento:** permitir que otra IA construya un archivo Excel de ejemplo, completo y visualmente sólido, que después pueda ser traído nuevamente a Copilot para revisión, ajuste y conexión con los archivos reales.
+
+> **Instrucción crítica:** el archivo de ejemplo debe demostrar la **estructura, lógica, relaciones, fórmulas, filtros y experiencia de uso**. No debe intentar reproducir los montos reales, el número real de posiciones, la cantidad real de ISIN ni el tamaño real de los portafolios. Se deben usar datos sintéticos, claramente identificados como tales.
+
+---
+
+# 1. Resultado esperado
+
+Crear un libro Excel `.xlsx` denominado, por ejemplo:
+
+`Ejemplo_Monitor_Pensionales_Dinamico.xlsx`
+
+El libro debe permitir que un trader seleccione uno o varios portafolios Pensionales y pueda responder, desde una vista ejecutiva:
+
+1. ¿Cómo está compuesto el portafolio por activo?
+2. ¿Cómo está compuesto por sector?
+3. ¿Cómo está compuesto por emisor?
+4. ¿Cómo está distribuido por nodo de duración o plazo?
+5. ¿Cómo está distribuido por indicador o indexación?
+6. ¿Cómo está compuesto por tipo de papel?
+7. ¿Qué exposiciones están cerca, en, o por encima de sus límites?
+8. ¿Qué activos son comunes entre los portafolios seleccionados?
+9. ¿Los portafolios con un activo común quieren comprar, vender o mantener?
+10. ¿Existe una oportunidad de operar varios portafolios en conjunto?
+11. ¿Dónde existe conflicto de estrategia entre portafolios?
+12. ¿Qué información no pudo cruzarse con riesgo y requiere revisión manual?
+
+La pantalla principal debe funcionar como un **dashboard de una sola página**, no como una colección de tablas dispersas.
+
+---
+
+# 2. Alcance
+
+## Incluido
+
+- Únicamente portafolios clasificados como **Pensionales**.
+- Posiciones de renta fija, liquidez, FIC y otras categorías si aparecen en la sábana.
+- Composición por diferentes dimensiones.
+- Estrategia objetivo por portafolio y agrupación.
+- Cruce de exposición frente a límites de riesgo.
+- Identificación de activos comunes.
+- Comparación entre portafolios seleccionados.
+- Datos de ejemplo sintéticos.
+- Diseño para actualización diaria.
+
+## Excluido en esta etapa
+
+- Portafolios no Pensionales.
+- Automatización directa contra SharePoint, Bloomberg, bases SQL o APIs.
+- Ejecución de operaciones.
+- Optimización matemática de portafolios.
+- Valoración independiente de títulos.
+- Cálculo de VaR, duración total o convexidad, salvo que se agreguen solo como campos ilustrativos.
+- Réplica de los montos reales.
+- Réplica del número real de ISIN o posiciones.
+
+---
+
+# 3. Principio de diseño
+
+El archivo debe separar claramente cuatro capas:
+
+1. **Entradas:** datos que se reemplazan diariamente.
+2. **Normalización:** claves, clasificaciones y campos derivados.
+3. **Modelo analítico:** cruces, agregaciones, alertas y comparaciones.
+4. **Presentación:** dashboard y vistas operativas.
+
+No se debe construir el dashboard directamente sobre rangos desordenados. Todas las entradas deben convertirse en **Tablas estructuradas de Excel** con nombres estables.
+
+El modelo debe ser tolerante a:
+
+- diferente número de filas cada día;
+- nuevos títulos;
+- títulos que desaparecen;
+- nuevos portafolios Pensionales;
+- portafolios sin posiciones;
+- ISIN vacíos;
+- límites de riesgo faltantes;
+- sectores o indicadores sin clasificar;
+- estrategias sin valor definido.
+
+---
+
+# 4. Hojas requeridas
+
+## 4.1 `00_DASHBOARD`
+
+Hoja principal. Debe abrirse por defecto al abrir el libro.
+
+Debe contener:
+
+- selector de portafolio principal;
+- selector opcional de varios portafolios para comparación;
+- nombre completo del portafolio;
+- fecha de corte;
+- indicadores ejecutivos;
+- seis gráficos de composición;
+- tabla de alertas de riesgo;
+- tabla de activos comunes;
+- resumen de estrategia;
+- mensajes claros cuando no exista información.
+
+Debe estar configurada para impresión horizontal en una página, preferiblemente tamaño A3 o Legal.
+
+## 4.2 `01_POSICIONES_INPUT`
+
+Entrada diaria de la sábana Pensional.
+
+Tabla requerida: `tblPosiciones`.
+
+El usuario debe poder reemplazar el contenido debajo de los encabezados sin modificar la estructura del libro.
+
+## 4.3 `02_ESTRATEGIA_INPUT`
+
+Entrada de la estrategia deseada.
+
+Tabla requerida: `tblEstrategia`.
+
+Debe usar formato largo, no una matriz difícil de mantener.
+
+## 4.4 `03_RIESGO_INPUT`
+
+Entrada normalizada de cupos o límites por portafolio y emisor.
+
+Tabla requerida: `tblRiesgo`.
+
+## 4.5 `04_MAESTROS`
+
+Catálogos y equivalencias estables:
+
+- catálogo de portafolios;
+- catálogo de emisores;
+- equivalencias de NIT;
+- clasificación sectorial;
+- clasificación de tipo de papel;
+- clasificación por indicador;
+- orden de nodos;
+- umbrales de alerta;
+- lista de estados de estrategia.
+
+## 4.6 `05_MODELO_POSICIONES`
+
+Resultado normalizado con campos derivados y claves de cruce.
+
+Tabla requerida: `tblModeloPosiciones`.
+
+Esta hoja puede estar oculta, pero debe ser auditable.
+
+## 4.7 `06_ACTIVOS_COMUNES`
+
+Vista detallada de coincidencias entre portafolios.
+
+Tabla requerida: `tblActivosComunes`.
+
+## 4.8 `07_RIESGO_CALCULADO`
+
+Vista detallada de exposición, límite, utilización y estado.
+
+Tabla requerida: `tblRiesgoCalculado`.
+
+## 4.9 `08_CALIDAD_DATOS`
+
+Controles y excepciones.
+
+Tabla requerida: `tblCalidadDatos`.
+
+## 4.10 `09_INSTRUCCIONES`
+
+Explicación corta de actualización diaria, campos obligatorios, código de colores y supuestos.
+
+---
+
+# 5. Estructura de la entrada de posiciones
+
+La tabla `tblPosiciones` debe contener como mínimo los siguientes campos. Los nombres deben mantenerse exactamente para que el modelo sea reutilizable.
+
+| Campo | Tipo | Obligatorio | Cambia diariamente | Descripción |
+|---|---|---:|---:|---|
+| FechaCorte | Fecha | Sí | Sí | Fecha de la sábana |
+| CodigoPortafolio | Texto | Sí | No normalmente | Código estable, por ejemplo `PEN001` |
+| NombrePortafolio | Texto | Sí | No normalmente | Nombre legible |
+| TipoPortafolio | Texto | Sí | No | Debe ser `Pensional` para entrar al modelo |
+| ISIN | Texto | No | Puede cambiar | Identificador del título |
+| Nemotecnico | Texto | Recomendado | Puede cambiar | Código de mercado o nombre corto |
+| NITEmisor | Texto | Sí | No normalmente | Usar como texto para no perder ceros |
+| Emisor | Texto | Sí | No normalmente | Nombre normalizado del emisor |
+| Sector | Texto | Sí | No normalmente | Sector económico o clasificación interna |
+| TipoActivo | Texto | Sí | No normalmente | Categoría de activo |
+| TipoPapel | Texto | Sí | No normalmente | TES, deuda privada, FIC, liquidez, etc. |
+| Indicador | Texto | Sí | No normalmente | TF, IPC, UVR, IBR, DTF, Liquidez, etc. |
+| Nodo | Texto | Sí | Puede cambiar | Rango de plazo o duración |
+| FechaVencimiento | Fecha | No | No | Vencimiento del título |
+| ValorPresente | Número | Sí | Sí | Valoración actual |
+| ValorNominal | Número | No | Sí | Nominal de la posición |
+| Duracion | Número | No | Sí | Duración modificada o métrica definida |
+| TasaMercado | Número | No | Sí | Tasa o yield de referencia |
+| Moneda | Texto | Sí | No normalmente | COP, UVR, USD, etc. |
+| Fuente | Texto | Sí | No | Nombre del archivo o sistema de origen |
+
+## Reglas
+
+- `CodigoPortafolio`, `NITEmisor` e `ISIN` deben almacenarse como texto.
+- `ValorPresente` debe poder agregarse sin dobles conteos.
+- Las filas con `TipoPortafolio <> "Pensional"` deben excluirse del modelo, no borrarse.
+- Los vacíos deben conservarse como vacíos o `Sin clasificar`, nunca inventarse.
+- No usar celdas combinadas en las tablas de entrada.
+- No incluir subtotales dentro de la tabla de entrada.
+
+---
+
+# 6. Estructura de estrategia
+
+La tabla `tblEstrategia` debe estar en formato largo:
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| FechaCorte | Fecha | Fecha de vigencia |
+| CodigoPortafolio | Texto | Código del portafolio |
+| DimensionEstrategia | Texto | Activo, Nodo, Indicador, TipoPapel, Sector o Emisor |
+| CategoriaEstrategia | Texto | Categoría específica, por ejemplo `TES UVR 5-10 años` |
+| ValorEstrategia | Número | Positivo, negativo o cero |
+| UnidadEstrategia | Texto | `COP_MM`, `PuntosPorcentuales`, `Duracion` o la unidad definida |
+| DireccionEstrategia | Fórmula | Aumentar, Reducir o Mantener |
+| Comentario | Texto | Explicación opcional |
+
+## Regla de signo
+
+- `ValorEstrategia > 0`: **Aumentar exposición / alargar**.
+- `ValorEstrategia < 0`: **Reducir exposición / acortar**.
+- `ValorEstrategia = 0`: **Mantener**.
+- Vacío: **Sin estrategia definida**.
+
+No convertir automáticamente un vacío en cero. Cero significa una decisión explícita de mantener; vacío significa que la instrucción no existe.
+
+---
+
+# 7. Estructura de riesgo
+
+La tabla `tblRiesgo` debe contener:
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| FechaCorte | Fecha | Fecha del archivo de riesgo |
+| CodigoPortafolio | Texto | Portafolio al que aplica el límite |
+| NITEmisor | Texto | Clave principal del emisor |
+| EmisorRiesgo | Texto | Nombre del emisor en riesgo |
+| TipoLimite | Texto | Porcentaje del portafolio, monto absoluto u otra regla |
+| LimitePorcentual | Porcentaje | Si aplica |
+| LimiteMonto | Número | Si existe directamente |
+| CupoAprobado | Número | Campo informativo si está disponible |
+| Calificacion | Texto | Calificación, si existe |
+| FuenteRiesgo | Texto | Archivo o sistema origen |
+
+## Prioridad del cálculo de límite
+
+1. Si existe `LimiteMonto`, usarlo.
+2. Si no existe monto, pero sí `LimitePorcentual`, calcular:
+
+   `LimiteCalculado = ValorTotalPortafolio × LimitePorcentual`
+
+3. Si no existe ninguno, mostrar **Sin límite informado**.
+4. Nunca suponer un límite basándose en otro portafolio o emisor similar.
+
+## Utilización
+
+`Utilizacion = ExposicionActual / LimiteCalculado`
+
+Estados recomendados:
+
+- `< 75%`: Dentro de límite.
+- `75% a < 85%`: Seguimiento.
+- `85% a < 100%`: Alerta.
+- `>= 100%`: Al límite o excedido.
+- Sin límite: Sin cruce / información incompleta.
+
+Los umbrales deben estar en `04_MAESTROS`, no escritos directamente dentro de múltiples fórmulas.
+
+---
+
+# 8. Clave única del activo
+
+Crear `ClaveActivo` con la siguiente prioridad:
+
+1. Si existe un ISIN válido:
+
+   `ClaveActivo = ISIN`
+
+2. Si no existe ISIN:
+
+   `ClaveActivo = NITEmisor & "|" & Nemotecnico & "|" & FechaVencimiento & "|" & Moneda`
+
+3. Si tampoco existe vencimiento, usar:
+
+   `NITEmisor & "|" & Nemotecnico & "|" & TipoPapel & "|" & Indicador`
+
+La lógica debe minimizar falsos positivos. Dos títulos del mismo emisor no son necesariamente el mismo activo.
+
+Crear adicionalmente:
+
+- `ClavePortafolioActivo = CodigoPortafolio & "|" & ClaveActivo`
+- `ClavePortafolioEmisor = CodigoPortafolio & "|" & NITEmisor`
+- `ClaveEstrategia = CodigoPortafolio & "|" & DimensionEstrategia & "|" & CategoriaEstrategia`
+
+---
+
+# 9. Dimensiones de composición
+
+El dashboard debe presentar, para el portafolio seleccionado, las siguientes composiciones:
+
+## Por activo
+
+Usar `TipoActivo` o una clasificación maestra consistente.
+
+Ejemplo sintético:
+
+- TES tasa fija.
+- TES UVR.
+- Deuda privada tasa fija.
+- Deuda privada IPC.
+- Deuda privada IBR.
+- Liquidez.
+- FIC.
+
+## Por sector
+
+Ejemplo:
+
+- Gobierno nacional.
+- Financiero.
+- Energía.
+- Infraestructura.
+- Servicios públicos.
+- Corporativo.
+- Liquidez.
+- Otros.
+
+## Por emisor
+
+Mostrar los principales emisores por peso y agrupar el resto como `Otros` cuando sea necesario para legibilidad.
+
+## Por nodo
+
+Usar un orden estable, no alfabético:
+
+1. Liquidez / menor a 1 año.
+2. 1-3 años.
+3. 3-5 años.
+4. 5-7 años.
+5. 7-10 años.
+6. 10-15 años.
+7. Mayor a 15 años.
+8. Sin clasificar.
+
+## Por indicador
+
+- Tasa fija.
+- IPC.
+- UVR.
+- IBR.
+- DTF.
+- Liquidez.
+- Otro.
+
+## Por tipo de papel
+
+- TES.
+- Bono ordinario.
+- Bono subordinado.
+- CDT.
+- Titularización.
+- FIC.
+- Cuenta bancaria / liquidez.
+- Otro.
+
+---
+
+# 10. Dashboard de una sola página
+
+## Encabezado
+
+Debe mostrar:
+
+- título `Monitor Pensionales`;
+- fecha de corte;
+- selector de portafolio;
+- nombre completo;
+- estado de actualización;
+- indicador visible de que los datos son sintéticos en el archivo de ejemplo.
+
+## Filtros
+
+### Obligatorio
+
+- Un selector de `CodigoPortafolio`.
+
+### Deseable
+
+- Segmentador de fecha.
+- Segmentador de sector.
+- Segmentador de indicador.
+- Selección múltiple de portafolios para comparación de activos comunes.
+
+Si se usan tablas dinámicas, los segmentadores deben estar conectados a todas las tablas dinámicas relevantes mediante la misma caché o el modelo de datos.
+
+## KPI
+
+No enfocar el ejemplo en los valores específicos. Los KPI deben demostrar la lógica:
+
+- valor de mercado del portafolio seleccionado;
+- número de emisores;
+- porcentaje de exposición con alerta de riesgo;
+- cantidad de categorías con estrategia de aumentar;
+- cantidad de categorías con estrategia de reducir;
+- indicador de faltantes de riesgo;
+- indicador de conflictos de estrategia en activos comunes.
+
+## Gráficos
+
+Presentar seis gráficos:
+
+1. Composición por activo.
+2. Composición por sector.
+3. Composición por emisor.
+4. Composición por nodo.
+5. Composición por indicador.
+6. Composición por tipo de papel.
+
+### Reglas visuales
+
+- Usar barras horizontales para emisor y nodo.
+- Usar dona o barras para composiciones con pocas categorías.
+- Ordenar de mayor a menor, excepto nodo, que debe conservar el orden temporal.
+- Mostrar porcentajes, no solamente montos.
+- Limitar cada gráfico a aproximadamente 6-8 categorías visibles.
+- Agrupar categorías menores como `Otros`.
+- No usar gráficos 3D.
+- Mantener una paleta consistente.
+- No repetir la leyenda si las etiquetas directas son suficientes.
+
+## Zona de riesgo
+
+Tabla compacta con máximo 5-8 filas visibles:
+
+- Emisor.
+- Exposición actual.
+- Límite.
+- Utilización.
+- Holgura.
+- Estado.
+
+Ordenar primero por mayor utilización y luego por mayor exposición.
+
+Código de colores:
+
+- Verde: normal.
+- Amarillo: seguimiento.
+- Naranja: alerta.
+- Rojo: excedido.
+- Gris: sin información.
+
+## Zona de estrategia
+
+Mostrar:
+
+- principales instrucciones de aumentar;
+- principales instrucciones de reducir;
+- categorías de mantener;
+- categorías sin estrategia definida.
+
+El color no debe sustituir el texto. Siempre mostrar la palabra `Aumentar`, `Reducir`, `Mantener` o `Sin definir`.
+
+## Zona de activos comunes
+
+Cuando se seleccionen varios portafolios, mostrar:
+
+- ClaveActivo.
+- Nemotécnico.
+- Emisor.
+- Número de portafolios seleccionados que poseen el activo.
+- Lista de portafolios.
+- Exposición relativa en cada portafolio.
+- Dirección estratégica de cada portafolio.
+- Consenso.
+
+Estados de consenso:
+
+- `Compra conjunta`: todos quieren aumentar.
+- `Venta conjunta`: todos quieren reducir.
+- `Mantener`: todos mantienen.
+- `Sesgo comprador`: mezcla de aumentar y mantener.
+- `Sesgo vendedor`: mezcla de reducir y mantener.
+- `Conflicto`: al menos uno aumenta y otro reduce.
+- `Información incompleta`: falta estrategia para uno o más portafolios.
+
+---
+
+# 11. Lógica de activos comunes
+
+Un activo es común cuando la misma `ClaveActivo` aparece al menos una vez en dos o más portafolios seleccionados.
+
+Debe evitarse contar dos veces el mismo activo dentro del mismo portafolio. Primero se debe consolidar por:
+
+`CodigoPortafolio + ClaveActivo`
+
+Después se debe contar el número de portafolios distintos.
+
+Pseudológica:
+
+```text
+1. Filtrar posiciones a portafolios seleccionados.
+2. Agrupar por CodigoPortafolio y ClaveActivo.
+3. Sumar ValorPresente dentro de cada combinación.
+4. Agrupar nuevamente por ClaveActivo.
+5. Contar CodigoPortafolio distintos.
+6. Conservar activos con conteo >= 2.
+7. Cruzar estrategia por portafolio y categoría.
+8. Clasificar consenso.
+```
+
+---
+
+# 12. Campos derivados del modelo
+
+`tblModeloPosiciones` debe incluir como mínimo:
+
+- FechaCorte.
+- CodigoPortafolio.
+- NombrePortafolio.
+- ClaveActivo.
+- ClavePortafolioActivo.
+- ClavePortafolioEmisor.
+- ISIN.
+- Nemotecnico.
+- NITEmisor.
+- Emisor.
+- Sector.
+- TipoActivo.
+- TipoPapel.
+- Indicador.
+- Nodo.
+- ValorPresente.
+- ValorTotalPortafolio.
+- PesoPortafolio.
+- CategoriaEstrategiaAplicable.
+- ValorEstrategia.
+- DireccionEstrategia.
+- LimiteAplicable.
+- ExposicionEmisor.
+- UtilizacionLimite.
+- HolguraLimite.
+- EstadoRiesgo.
+- EstadoCalidad.
+
+## Fórmulas conceptuales
+
+```text
+PesoPortafolio = ValorPresente / ValorTotalPortafolio
+ExposicionEmisor = suma de ValorPresente por CodigoPortafolio + NITEmisor
+HolguraLimite = LimiteAplicable - ExposicionEmisor
+UtilizacionLimite = ExposicionEmisor / LimiteAplicable
+```
+
+Usar `IFERROR` solamente cuando el resultado alternativo sea explícito. No ocultar errores de cruce convirtiéndolos silenciosamente en cero.
+
+---
+
+# 13. Tecnología recomendada
+
+La IA puede escoger una de estas arquitecturas:
+
+## Opción A: Power Query + tablas dinámicas
+
+Preferida si se busca actualización diaria sencilla.
+
+- Power Query para importar y normalizar las tres entradas.
+- Modelo de datos o tablas dinámicas para composiciones.
+- Segmentadores para portafolio y fecha.
+- Medidas explícitas si se usa Power Pivot.
+
+## Opción B: Tablas estructuradas + fórmulas dinámicas
+
+Adecuada si se requiere portabilidad sin depender de Power Pivot.
+
+Funciones recomendadas para Microsoft 365:
+
+- `XLOOKUP`.
+- `FILTER`.
+- `UNIQUE`.
+- `SORTBY`.
+- `LET`.
+- `SUMIFS`.
+- `COUNTIFS`.
+- `VSTACK` y `HSTACK`, si están disponibles.
+
+## Opción C: Modelo de datos con DAX
+
+Recomendado si la comparación de múltiples portafolios y los activos comunes se vuelven complejos.
+
+Medidas conceptuales:
+
+```DAX
+Valor Mercado := SUM(Posiciones[ValorPresente])
+
+Peso Portafolio :=
+DIVIDE(
+    [Valor Mercado],
+    CALCULATE([Valor Mercado], ALLSELECTED(DimComposicion))
+)
+
+Exposicion Emisor :=
+CALCULATE(
+    [Valor Mercado],
+    ALLEXCEPT(Posiciones, Posiciones[CodigoPortafolio], Posiciones[NITEmisor])
+)
+
+Portafolios con Activo :=
+DISTINCTCOUNT(Posiciones[CodigoPortafolio])
+```
+
+La IA debe documentar la opción elegida y evitar combinar tecnologías sin necesidad.
+
+---
+
+# 14. Datos sintéticos del ejemplo
+
+Crear suficientes datos para demostrar funcionamiento, pero no imitar el volumen real.
+
+Sugerencia:
+
+- 4 portafolios Pensionales ficticios.
+- 20-35 activos ficticios en total.
+- 8-12 emisores ficticios o genéricos.
+- Algunos activos exclusivos.
+- Al menos 6 activos comunes entre dos o más portafolios.
+- Al menos un caso de compra conjunta.
+- Al menos un caso de venta conjunta.
+- Al menos un conflicto de estrategia.
+- Al menos un emisor al 85%-99% del límite.
+- Al menos un emisor por encima del 100%.
+- Al menos un cruce de riesgo faltante.
+- Al menos un ISIN vacío para probar la clave alternativa.
+- Al menos una categoría `Sin clasificar`.
+
+Usar nombres claramente sintéticos, por ejemplo:
+
+- `PEN001 - Fondo Pensional Ejemplo Norte`.
+- `PEN002 - Fondo Pensional Ejemplo Centro`.
+- `Emisor Financiero Alfa`.
+- `Empresa Energía Beta`.
+
+Agregar una nota visible: **“Datos sintéticos para demostración. No usar para decisiones de inversión.”**
+
+---
+
+# 15. Elementos estables y elementos reemplazables
+
+## No deben cambiar diariamente
+
+- Nombres de hojas.
+- Nombres de tablas.
+- Encabezados de campos.
+- Fórmulas del modelo.
+- Relaciones entre tablas.
+- Umbrales de riesgo configurados.
+- Orden de nodos.
+- Reglas de clasificación.
+- Paleta de colores.
+- Diseño del dashboard.
+- Nombres de rangos.
+- Segmentadores y conexiones.
+- Lógica de `ClaveActivo`.
+- Lógica de consenso estratégico.
+
+## Se reemplazan o actualizan diariamente
+
+- Filas de `tblPosiciones`.
+- Fecha de corte.
+- ValorPresente.
+- ValorNominal.
+- Tasas y duración.
+- Estrategia vigente, si cambia.
+- Límites o cupos, si llega un archivo actualizado.
+- Nuevas equivalencias que aparezcan como excepción.
+
+## Pueden crecer con el tiempo
+
+- Catálogo de portafolios.
+- Catálogo de emisores.
+- Equivalencias de NIT.
+- Clasificaciones sectoriales.
+- Catálogo de tipos de papel.
+- Categorías de estrategia.
+
+---
+
+# 16. Proceso diario esperado
+
+El diseño debe permitir este proceso:
+
+1. Abrir el archivo.
+2. Ir a `01_POSICIONES_INPUT`.
+3. Borrar únicamente las filas anteriores de la tabla, sin borrar encabezados.
+4. Pegar la nueva sábana.
+5. Reemplazar estrategia en `02_ESTRATEGIA_INPUT`, si aplica.
+6. Reemplazar riesgo en `03_RIESGO_INPUT`, si aplica.
+7. Presionar `Actualizar todo` si se usa Power Query o tablas dinámicas.
+8. Revisar `08_CALIDAD_DATOS`.
+9. Abrir `00_DASHBOARD`.
+10. Seleccionar el portafolio o grupo de portafolios.
+
+Idealmente el refresh debe terminar en menos de 30 segundos para un archivo de tamaño normal. El ejemplo no necesita medir rendimiento real, pero la arquitectura no debe depender de fórmulas volátiles como `OFFSET` o `INDIRECT` aplicadas a miles de filas.
+
+---
+
+# 17. Controles de calidad obligatorios
+
+La hoja `08_CALIDAD_DATOS` debe mostrar:
+
+| Control | Severidad |
+|---|---|
+| CodigoPortafolio vacío | Error |
+| NombrePortafolio vacío | Error |
+| NITEmisor vacío | Error |
+| ValorPresente no numérico | Error |
+| TipoPortafolio diferente de Pensional | Informativo / excluido |
+| ISIN vacío con clave alternativa disponible | Advertencia |
+| ISIN vacío sin datos suficientes para clave alternativa | Error |
+| Sector vacío | Advertencia |
+| Indicador vacío | Advertencia |
+| Nodo vacío | Advertencia |
+| Estrategia sin coincidencia | Advertencia |
+| Emisor sin límite de riesgo | Advertencia |
+| Código de portafolio no encontrado en riesgo | Advertencia |
+| Límite igual a cero con exposición positiva | Error crítico |
+| ClaveActivo duplicada con atributos contradictorios | Error crítico |
+| Fecha de posiciones diferente de fecha de riesgo | Advertencia |
+
+No ocultar registros problemáticos. Debe existir una tabla navegable con la fila de origen o una clave para investigarlos.
+
+---
+
+# 18. Reglas visuales
+
+Paleta sugerida:
+
+- Azul oscuro: encabezados y navegación.
+- Azul medio o turquesa: filtros y KPI neutrales.
+- Verde: aumentar, dentro de límite.
+- Amarillo: seguimiento o mantener.
+- Naranja: alerta.
+- Rojo: reducir, conflicto o excedido.
+- Gris: sin información.
+
+Formato financiero:
+
+- Ceros como `-`.
+- Negativos en rojo y entre paréntesis.
+- Porcentajes con uno o dos decimales.
+- Unidades visibles en encabezados, por ejemplo `Valor presente (COP MM)`.
+- Fórmulas en negro.
+- Entradas editables en azul.
+- Celdas que requieren actualización manual con fondo amarillo suave.
+- Quitar cuadrícula en dashboard y hojas de presentación.
+- Congelar encabezados en tablas largas.
+
+---
+
+# 19. Requisitos de usabilidad
+
+- No obligar al usuario a editar fórmulas.
+- No usar macros salvo que sean estrictamente necesarias.
+- Si se usan macros, entregar también una versión sin macros o documentar exactamente su función.
+- Mostrar mensajes como `Sin información de riesgo`, no `#N/A`.
+- Los filtros deben tener nombres entendibles para un trader.
+- El dashboard debe reaccionar al selector sin que el usuario tenga que modificar rangos.
+- Debe ser obvio cuáles celdas son editables.
+- Debe existir un botón o instrucción visible para `Actualizar todo`.
+- El archivo debe abrir sin mensajes de reparación de Excel.
+
+---
+
+# 20. Criterios de aceptación
+
+El archivo se considera completo si cumple todos estos puntos:
+
+- [ ] Abre directamente en el dashboard.
+- [ ] El dashboard cabe en una sola página.
+- [ ] Se puede seleccionar al menos un portafolio.
+- [ ] Los seis gráficos cambian con la selección.
+- [ ] Los KPI cambian con la selección.
+- [ ] El usuario puede comparar varios portafolios para activos comunes.
+- [ ] Los activos comunes no se cuentan doble dentro de un mismo portafolio.
+- [ ] La estrategia distingue aumentar, reducir, mantener y sin definir.
+- [ ] Existe una clasificación clara de consenso.
+- [ ] El riesgo muestra exposición, límite, utilización, holgura y estado.
+- [ ] Los faltantes de riesgo se muestran, no se reemplazan con supuestos.
+- [ ] Existen controles de calidad.
+- [ ] Los datos de ejemplo están marcados como sintéticos.
+- [ ] Las tablas tienen nombres estables.
+- [ ] La entrada diaria puede reemplazarse sin reconstruir el dashboard.
+- [ ] El libro no contiene errores visibles de fórmula.
+- [ ] El libro no presenta advertencias de reparación al abrir.
+- [ ] Se entrega una hoja de instrucciones.
+
+---
+
+# 21. Entregables solicitados a la otra IA
+
+La otra IA debe entregar:
+
+1. El archivo `.xlsx` funcional con datos sintéticos.
+2. Una hoja `09_INSTRUCCIONES` dentro del libro.
+3. Una lista breve de las tecnologías utilizadas.
+4. Una explicación de cómo reemplazar las tres entradas.
+5. Un diccionario de datos.
+6. Una lista de supuestos.
+7. Una lista de campos que no pudo implementar.
+8. Si usa Power Query, incluir las consultas dentro del libro.
+9. Si usa DAX, incluir las medidas con nombres legibles.
+10. Si usa macros, entregar el código VBA sin protección y explicar cada macro.
+
+---
+
+# 22. Prompt listo para entregar a otra IA
+
+Copiar desde aquí:
+
+```text
+Construye un archivo Excel .xlsx funcional llamado Ejemplo_Monitor_Pensionales_Dinamico.xlsx siguiendo íntegramente la especificación adjunta.
+
+Objetivo: crear un prototipo de alta calidad para administrar portafolios Pensionales, con un dashboard dinámico de una sola página que permita seleccionar un portafolio y ver composición por activo, sector, emisor, nodo, indicador y tipo de papel. También debe permitir seleccionar varios portafolios para identificar activos comunes y determinar si la estrategia está alineada para compra conjunta, venta conjunta, mantener o si existe conflicto.
+
+Usa únicamente datos sintéticos. No intentes reproducir montos reales, número real de posiciones ni cantidad real de ISIN. Lo importante es demostrar la arquitectura, estructura de datos, relaciones, fórmulas, filtros, controles y diseño.
+
+Respeta exactamente estos nombres de hojas:
+00_DASHBOARD
+01_POSICIONES_INPUT
+02_ESTRATEGIA_INPUT
+03_RIESGO_INPUT
+04_MAESTROS
+05_MODELO_POSICIONES
+06_ACTIVOS_COMUNES
+07_RIESGO_CALCULADO
+08_CALIDAD_DATOS
+09_INSTRUCCIONES
+
+Respeta exactamente estos nombres de tablas:
+tblPosiciones
+tblEstrategia
+tblRiesgo
+tblModeloPosiciones
+tblActivosComunes
+tblRiesgoCalculado
+tblCalidadDatos
+
+No inventes límites de riesgo. Si un cruce no existe, muestra Sin información de riesgo. No conviertas estrategias vacías en cero. Cero debe significar Mantener y vacío debe significar Sin estrategia definida.
+
+La clave del activo debe priorizar ISIN y usar una clave alternativa basada en NITEmisor, Nemotecnico, FechaVencimiento y Moneda cuando el ISIN esté vacío.
+
+Incluye datos sintéticos que permitan probar: compra conjunta, venta conjunta, conflicto de estrategia, alerta de riesgo, límite excedido, falta de cruce de riesgo, ISIN vacío y categoría sin clasificar.
+
+Configura el dashboard para impresión horizontal en una sola página y haz que el libro abra directamente en 00_DASHBOARD.
+
+Antes de entregar, valida que el archivo abra en Excel sin reparación, que no existan errores visibles de fórmula y que todos los selectores y gráficos respondan correctamente.
+```
+
+---
+
+# 23. Nota para la siguiente iteración en Copilot
+
+Cuando el archivo de ejemplo esté listo, traerlo nuevamente y solicitar:
+
+1. revisión estructural;
+2. validación de fórmulas;
+3. comparación contra los archivos reales `PlanTrading` y `Cupos por portafolio`;
+4. mapeo definitivo de columnas;
+5. adaptación de las consultas al formato real;
+6. pruebas con un corte diario;
+7. optimización visual y de rendimiento;
+8. documentación del procedimiento operativo final.
+
+No conectar directamente el prototipo a producción antes de validar:
+
+- códigos de portafolio;
+- NIT de emisores;
+- definición exacta de nodo;
+- clasificación de tipo de activo;
+- unidad de la estrategia;
+- interpretación del límite porcentual;
+- tratamiento de liquidez y derivados;
+- posibles posiciones negativas;
+- títulos sin ISIN;
+- fechas de corte diferentes entre posición y riesgo.
